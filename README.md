@@ -12,22 +12,13 @@
 ## 界面
 
 ### 已收藏模型
-<details>
-<summary>点击展开截图</summary>
-<img src="static/demo1.png" width="100%">
-</details>
+[![已收藏模型](static/demo1.png)](static/demo1.png)
 
 ### 通过链接搜索
-<details>
-<summary>点击展开截图</summary>
-<img src="static/demo2.png" width="100%">
-</details>
+[![通过链接搜索](static/demo2.png)](static/demo2.png)
 
 ### 下载队列
-<details>
-<summary>点击展开截图</summary>
-<img src="static/demo3.png" width="100%">
-</details>
+[![下载队列](static/demo3.png)](static/demo3.png)
 
 ## 运行
 
