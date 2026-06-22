@@ -51,8 +51,7 @@ deactivate
 ├── aria2c.exe             # 下载引擎（需自行下载）
 ├── build.bat              # 打包脚本
 ├── favorite_list.json     # 模型数据库（外部分发）
-├── static/                # 前端文件
-└── cloud_service/         # 云端认证（可选）
+└── static/                # 前端文件
 ```
 
 ## 依赖
