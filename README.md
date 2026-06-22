@@ -12,13 +12,22 @@
 ## 界面
 
 ### 已收藏模型
-![已收藏模型——搜索、过滤来源、收藏时间、一键下载、取消收藏、浏览器直链](static/demo1.png)
+<details>
+<summary>点击展开截图</summary>
+<img src="static/demo1.png" width="100%">
+</details>
 
 ### 通过链接搜索
-![通过链接搜索——粘贴仓库链接、搜索模型、批量收藏、加入下载队列](static/demo2.png)
+<details>
+<summary>点击展开截图</summary>
+<img src="static/demo2.png" width="100%">
+</details>
 
 ### 下载队列
-![下载队列——下载进度、取消下载、打开文件夹](static/demo3.png)
+<details>
+<summary>点击展开截图</summary>
+<img src="static/demo3.png" width="100%">
+</details>
 
 ## 运行
 
