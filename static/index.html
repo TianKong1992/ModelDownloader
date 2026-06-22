@@ -1,0 +1,1147 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>模型下载管理工具</title>
+    <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+    <style>
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html,
+        body {
+            height: 100%;
+            overflow: hidden;
+        }
+
+        body {
+            background: #0B0E14;
+            background-image:
+                radial-gradient(circle at 20px 20px, rgba(255, 255, 255, .025) 1px, transparent 1px),
+                radial-gradient(ellipse at 50% 0%, #1A1F2E 0%, #0B0E14 70%);
+            background-size: 40px 40px, 100% 100%;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, "Microsoft YaHei", sans-serif;
+            color: #F1F5F9;
+            display: flex;
+            flex-direction: column;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* ===== Header ===== */
+        .header {
+            flex: 0 0 auto;
+            padding: 18px 24px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            border-bottom: 1px solid rgba(255, 255, 255, .05);
+            z-index: 100;
+        }
+
+        .header h1 {
+            font-weight: 600;
+            font-size: 20px;
+            letter-spacing: -0.3px;
+            background: linear-gradient(135deg, #E2E8F0 0%, #94A3B8 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        /* ===== Main ===== */
+        .main {
+            flex: 1 1 auto;
+            display: flex;
+            overflow: hidden;
+            padding: 20px 24px;
+            gap: 14px;
+        }
+
+        /* ===== Tabs (sidebar) ===== */
+        .tabs {
+            flex: 0 0 200px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            padding: 6px;
+            background: rgba(255, 255, 255, .04);
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, .05);
+        }
+
+        .tab-btn {
+            padding: 14px 20px;
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            color: #94A3B8;
+            border-radius: 13px;
+            transition: all .25s ease;
+            letter-spacing: -0.2px;
+            text-align: left;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .tab-btn:hover {
+            color: #CBD5E1;
+        }
+
+        .tab-btn.active {
+            background: rgba(255, 255, 255, .08);
+            color: #F1F5F9;
+            font-weight: 600;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, .3);
+        }
+
+        .tab-btn .badge {
+            display: inline-block;
+            background: rgba(255, 255, 255, .06);
+            color: #94A3B8;
+            border-radius: 10px;
+            padding: 0px 8px;
+            font-size: 11px;
+            margin-left: auto;
+            transition: all .25s ease;
+        }
+
+        .tab-btn.active .badge {
+            background: rgba(59, 130, 246, .15);
+            color: #60A5FA;
+        }
+
+        /* ===== Tab Content ===== */
+        .tab-content {
+            flex: 1 1 auto;
+            display: none;
+            flex-direction: column;
+            overflow: hidden;
+            gap: 12px;
+        }
+
+        .tab-content.active {
+            display: flex;
+        }
+
+        /* ===== Toolbar ===== */
+        .toolbar {
+            flex: 0 0 auto;
+            display: flex;
+            gap: 12px;
+            padding: 14px 18px;
+            flex-wrap: wrap;
+            align-items: center;
+            background: rgba(255, 255, 255, .03);
+            backdrop-filter: blur(24px) saturate(1.2);
+            -webkit-backdrop-filter: blur(24px) saturate(1.2);
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, .06);
+        }
+
+        .toolbar .search-box {
+            flex: 1;
+            min-width: 200px;
+            position: relative;
+        }
+
+        .toolbar .search-box input {
+            width: 100%;
+            padding: 12px 16px 12px 40px;
+            background: rgba(255, 255, 255, .04);
+            border: 1px solid rgba(255, 255, 255, .08);
+            border-radius: 14px;
+            font-size: 14px;
+            color: #F1F5F9;
+            outline: none;
+            transition: all .25s ease;
+            caret-color: #3B82F6;
+        }
+
+        .toolbar .search-box input::placeholder {
+            color: #94A3B8;
+        }
+
+        .toolbar .search-box input:focus {
+            border-color: transparent;
+            background: rgba(255, 255, 255, .07);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, .35), 0 0 40px rgba(59, 130, 246, .08);
+        }
+
+        .toolbar .search-box .search-icon {
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #94A3B8;
+            font-size: 15px;
+            pointer-events: none;
+        }
+
+        .toolbar label {
+            font-size: 13px;
+            color: #CBD5E1;
+            font-weight: 500;
+            white-space: nowrap;
+        }
+
+        /* ===== Buttons ===== */
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 14px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all .25s cubic-bezier(0.25, 0.46, 0.45, .94);
+            white-space: nowrap;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            letter-spacing: -0.2px;
+        }
+
+        .btn:disabled {
+            opacity: .35;
+            cursor: not-allowed;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #3B82F6, #8B5CF6);
+            color: #fff;
+            box-shadow: 0 4px 20px rgba(59, 130, 246, .25);
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            transform: translateY(-1px);
+            box-shadow: 0 8px 32px rgba(59, 130, 246, .4);
+            background: linear-gradient(135deg, #4B8BF7, #9B6CF6);
+        }
+
+        .btn-success {
+            background: #10B981;
+            color: #fff;
+        }
+
+        .btn-success:hover:not(:disabled) {
+            background: #0EA374;
+            transform: translateY(-1px);
+        }
+
+        .btn-outline {
+            background: transparent;
+            color: #CBD5E1;
+            border: 1px solid rgba(255, 255, 255, .1);
+        }
+
+        .btn-outline:hover:not(:disabled) {
+            background: rgba(255, 255, 255, .06);
+            color: #F1F5F9;
+            border-color: rgba(255, 255, 255, .2);
+        }
+
+        .btn-sm {
+            padding: 5px 12px;
+            font-size: 12px;
+            border-radius: 8px;
+        }
+
+        .btn-fav {
+            background: rgba(245, 158, 11, .1);
+            color: #F59E0B;
+            border: 1px solid rgba(245, 158, 11, .15);
+            padding: 5px 12px;
+            font-size: 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all .25s ease;
+        }
+
+        .btn-fav:hover:not(:disabled) {
+            background: rgba(245, 158, 11, .2);
+        }
+
+        .btn-fav.faved {
+            background: rgba(16, 185, 129, .1);
+            color: #10B981;
+            border-color: rgba(16, 185, 129, .2);
+        }
+
+        /* ===== Summary Bar ===== */
+        .summary-bar {
+            flex: 0 0 auto;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 10px 18px;
+            font-size: 13px;
+            color: #CBD5E1;
+            flex-wrap: wrap;
+        }
+
+        .summary-bar .count {
+            font-weight: 600;
+            color: #F1F5F9;
+        }
+
+        .summary-bar .cache-tag {
+            background: rgba(16, 185, 129, .12);
+            color: #10B981;
+            padding: 3px 10px;
+            border-radius: 8px;
+            font-size: 11px;
+            font-weight: 500;
+        }
+
+        /* ===== Table ===== */
+        .table-wrap table {
+            min-width: 100%;
+        }
+
+        .table-wrap {
+            flex: 1 1 auto;
+            overflow-y: auto;
+            overflow-x: auto;
+            background: rgba(255, 255, 255, .03);
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, .06);
+            backdrop-filter: blur(24px) saturate(1.2);
+            -webkit-backdrop-filter: blur(24px) saturate(1.2);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        thead {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        thead th {
+            background: rgba(15, 17, 23, .95);
+            backdrop-filter: blur(12px);
+            padding: 12px 14px;
+            text-align: left;
+            font-weight: 600;
+            color: #CBD5E1;
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: .6px;
+            border-bottom: 1px solid rgba(255, 255, 255, .06);
+            white-space: nowrap;
+        }
+
+        tbody td {
+            padding: 10px 14px;
+            border-bottom: 1px solid rgba(255, 255, 255, .03);
+            vertical-align: middle;
+        }
+
+        tbody tr {
+            transition: background .15s ease;
+        }
+
+        tbody tr:hover {
+            background: rgba(255, 255, 255, .02);
+        }
+
+        tbody tr.row-dl {
+            background: rgba(245, 158, 11, .08);
+        }
+
+        tbody tr.row-ok {
+            background: rgba(16, 185, 129, .06);
+        }
+
+        tbody tr.row-fail {
+            background: rgba(248, 113, 113, .08);
+        }
+
+        tbody tr.row-skip {
+            background: rgba(255, 255, 255, .01);
+            color: #94A3B8;
+        }
+
+        .col-source {
+            width: 150px !important;
+        }
+
+        .col-filename {
+            width: 400px !important;
+        }
+
+        .col-path {
+            width: 400px !important;
+            font-family: 'JetBrains Mono', "SF Mono", Consolas, monospace;
+            font-size: 11px;
+            color: #94A3B8;
+        }
+
+        .col-size {
+            width: 200px !important;
+        }
+
+        .col-actions {
+            width: 300px !important;
+            text-align: center;
+            white-space: nowrap;
+        }
+
+        .source-tag {
+            display: inline-block;
+            padding: 3px 9px;
+            border-radius: 6px;
+            font-size: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: .4px;
+        }
+
+        .source-tag.hf,
+        .source-tag.huggingface {
+            background: rgba(59, 130, 246, .15);
+            color: #60A5FA;
+        }
+
+        .source-tag.cnb,
+        .source-tag.cnb\.cool {
+            background: rgba(248, 113, 113, .15);
+            color: #F87171;
+        }
+
+        .source-tag.ms,
+        .source-tag.modelscope {
+            background: rgba(16, 185, 129, .15);
+            color: #10B981;
+        }
+
+        .size-tag {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            color: #CBD5E1;
+            letter-spacing: .1px;
+        }
+
+        .filename-cell {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            word-break: break-all;
+        }
+
+        input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+            accent-color: #3B82F6;
+            border-radius: 4px;
+        }
+
+        /* ===== Repos Input (Tab2) ===== */
+        .repos-input {
+            width: 100%;
+            min-height: 76px;
+            padding: 14px;
+            background: rgba(255, 255, 255, .04);
+            border: 1px solid rgba(255, 255, 255, .08);
+            border-radius: 14px;
+            font-size: 13px;
+            color: #F1F5F9;
+            caret-color: #3B82F6;
+            font-family: 'JetBrains Mono', Consolas, monospace;
+            resize: vertical;
+            outline: none;
+            line-height: 1.6;
+        }
+
+        .repos-input::placeholder {
+            color: #94A3B8;
+        }
+
+        select option {
+            background: #1c1c1e;
+            color: #F1F5F9;
+        }
+
+        .repos-input:focus {
+            border-color: transparent;
+            background: rgba(255, 255, 255, .07);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, .35), 0 0 40px rgba(59, 130, 246, .08);
+        }
+
+        /* ===== Footer Status ===== */
+        .footer-status {
+            flex: 0 0 auto;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 18px;
+            font-size: 13px;
+            color: #CBD5E1;
+            background: rgba(255, 255, 255, .03);
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, .06);
+            min-height: 40px;
+        }
+
+        .footer-status .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            flex: 0 0 auto;
+        }
+
+        .footer-status .dot.idle {
+            background: #94A3B8;
+        }
+
+        .footer-status .dot.active {
+            background: #3B82F6;
+            box-shadow: 0 0 12px #3B82F6;
+            animation: pulse-dot 1.2s infinite ease-in-out;
+        }
+
+        .footer-status .dot.done {
+            background: #10B981;
+            box-shadow: 0 0 8px #10B981;
+        }
+
+        .footer-status .dot.err {
+            background: #F87171;
+            box-shadow: 0 0 8px rgba(248, 113, 113, .6);
+        }
+
+        @keyframes pulse-dot {
+            0% {
+                opacity: .6;
+                transform: scale(.9);
+            }
+
+            50% {
+                opacity: 1;
+                transform: scale(1.2);
+            }
+
+            100% {
+                opacity: .6;
+                transform: scale(.9);
+            }
+        }
+
+        /* ===== Empty State ===== */
+        .empty-state {
+            text-align: center;
+            padding: 80px 20px;
+        }
+
+        .empty-state .icon {
+            font-size: 52px;
+            margin-bottom: 14px;
+            opacity: .35;
+        }
+
+        .empty-state div {
+            color: #94A3B8;
+            font-size: 15px;
+            font-weight: 400;
+        }
+
+        .empty-state .hint {
+            font-size: 13px;
+            color: #94A3B8;
+            opacity: .5;
+            margin-top: 6px;
+        }
+
+        /* ===== Progress Bar ===== */
+        .progress-bar {
+            flex: 0 0 auto;
+            height: 3px;
+            background: rgba(255, 255, 255, .04);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .progress-bar .fill {
+            height: 100%;
+            background: linear-gradient(90deg, #3B82F6, #8B5CF6, #06F7F7);
+            background-size: 200% 100%;
+            transition: width .5s ease;
+            box-shadow: 0 0 16px rgba(59, 130, 246, .5);
+            animation: shimmer 2.5s infinite linear;
+        }
+
+        @keyframes shimmer {
+            0% {
+                background-position: 200% 0;
+            }
+
+            100% {
+                background-position: -200% 0;
+            }
+        }
+
+        /* ===== Spinner ===== */
+        .spinner {
+            display: inline-block;
+            width: 15px;
+            height: 15px;
+            border: 2px solid rgba(255, 255, 255, .12);
+            border-top-color: #3B82F6;
+            border-radius: 50%;
+            animation: spin .7s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* ===== Scrollbar ===== */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, .15);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, .25);
+        }
+
+        /* ===== Toast ===== */
+        .toast {
+            position: fixed;
+            top: 24px;
+            right: 24px;
+            z-index: 999;
+            background: linear-gradient(135deg, #3B82F6, #8B5CF6);
+            color: #fff;
+            padding: 14px 24px;
+            border-radius: 14px;
+            font-size: 14px;
+            font-weight: 500;
+            box-shadow: 0 8px 32px rgba(59, 130, 246, .4);
+            transform: translateX(120%);
+            opacity: 0;
+            transition: all .35s cubic-bezier(0.25, 0.46, 0.45, .94);
+            pointer-events: none;
+            max-width: 380px;
+        }
+
+        .toast.show {
+            transform: translateX(0);
+            opacity: 1;
+        }
+
+        @media (max-width: 768px) {
+            .main {
+                padding: 12px;
+                gap: 10px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="header">
+        <div>
+            <h1><svg width="22" height="22" viewBox="0 0 100 100" style="vertical-align:-4px;margin-right:8px">
+                    <defs>
+                        <linearGradient id="mg" x1="0" y1="0" x2="1" y2="1">
+                            <stop offset="0%" stop-color="#3B82F6" />
+                            <stop offset="100%" stop-color="#8B5CF6" />
+                        </linearGradient>
+                    </defs>
+                    <rect width="100" height="100" rx="22" fill="none" /><text x="50" y="72" text-anchor="middle"
+                        font-family="Arial" font-size="70" font-weight="700" fill="url(#mg)">M</text>
+                </svg>模型下载管理工具</h1>
+        </div>
+    </div>
+
+    <div class="main">
+
+        <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab('tab1')" id="tab1Btn">📋 已收藏模型 <span class="badge"
+                    id="tab1Count">-</span></button>
+            <button class="tab-btn" onclick="switchTab('tab2')" id="tab2Btn">🔍 通过链接搜索 <span class="badge"
+                    id="tab2Count">0</span></button>
+            <button class="tab-btn" onclick="switchTab('tab3')" id="tab3Btn">📥 下载队列 <span class="badge"
+                    id="tab3Count">0</span></button>
+        </div>
+
+        <!-- TAB 1 -->
+        <div class="tab-content active" id="tab1">
+            <div class="toolbar">
+                <div class="search-box">
+                    <span class="search-icon">🔍</span>
+                    <input type="text" id="tab1Search" placeholder="输入模型名称过滤..." oninput="debounceFilterTab1()" autocomplete="off">
+                </div>
+            </div>
+            <div class="summary-bar"><span>共 <strong class="count" id="tab1Total">0</strong> 个</span>
+                <span style="margin-left:auto;display:flex;align-items:center;gap:12px">
+                    <label style="display:flex;align-items:center;gap:4px;cursor:pointer;font-size:13px;color:#94A3B8">
+                        <input type="checkbox" id="tab1ShowAll" onchange="debounceFilterTab1()"> 展示全部
+                    </label>
+                    <select id="tab1Source" onchange="debounceFilterTab1()"
+                        style="padding:7px 10px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:10px;color:#E2E8F0;font-size:12px;outline:none;cursor:pointer">
+                        <option value="">全部来源</option>
+                        <option value="huggingface">HuggingFace</option>
+                        <option value="cnb.cool">CNB</option>
+                        <option value="modelscope">ModelScope</option>
+                    </select>
+                </span>
+            </div>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th class="col-source">来源</th>
+                            <th class="col-filename">文件名</th>
+                            <th class="col-path">保存路径</th>
+                            <th class="col-size">大小</th>
+                            <th style="width:130px">收藏时间</th>
+                            <th class="col-actions">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tab1Tbody"></tbody>
+                </table>
+            </div>
+            <div class="footer-status">
+                <span class="dot idle" id="tab1Dot"></span>
+                <span id="tab1StatusText">就绪 - 输入关键词后自动搜索模型</span>
+            </div>
+        </div>
+
+        <!-- TAB 2 -->
+        <div class="tab-content" id="tab2">
+            <div class="toolbar">
+                <button class="btn btn-outline btn-sm" onclick="copyTestData()" style="align-self:flex-start;margin-bottom:4px">📋 复制测试链接</button>
+                <textarea class="repos-input" id="tab2Repos" oninput="saveTab2Repos()"
+                    placeholder="每行一个仓库链接，支持 HuggingFace / CNB / ModelScope中.safetensor和.gguf模型下载  请确保链接下文件夹不会太多，否则递归扫描太多次会导致网站拒绝访问&#10;例如: https://huggingface.co/Comfy-Org/Wan_2.1_ComfyUI_repackaged/tree/main&#10;https://cnb.cool/ai-models/Comfy-Org/ltx-2.3/-/tree/main/split_files/loras&#10;https://www.modelscope.cn/models/Comfy-Org/Wan_2.2_ComfyUI_Repackaged/resolve/master"></textarea>
+                <div style="text-align:right;width:100%;margin-top:8px">
+                    <button class="btn btn-primary" id="tab2SearchBtn" onclick="searchRepos()">🔍 搜索</button>
+                </div>
+            </div>
+            <div class="summary-bar"><span>共 <strong class="count" id="tab2Total">0</strong> 个</span>
+                <button class="btn btn-outline btn-sm" id="tab2BatchFav" onclick="batchFavAll()"
+                    style="display:none;margin-left:auto">📋 批量收藏</button>
+                            </div>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th class="col-source">来源</th>
+                            <th class="col-filename">文件名</th>
+                            <th class="col-path">保存路径</th>
+                            <th class="col-size">大小</th>
+                            <th class="col-actions">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tab2Tbody"></tbody>
+                </table>
+            </div>
+            <div class="footer-status">
+                <span class="dot idle" id="tab2Dot"></span>
+                <span id="tab2StatusText">就绪 - 输入仓库链接后点击搜索</span>
+            </div>
+        </div>
+
+        <!-- TAB 3: 下载队列 -->
+        <div class="tab-content" id="tab3">
+            <div class="toolbar">
+                <button class="btn btn-outline btn-sm" onclick="apiQueueClear()">🗑 清理已完成</button>
+                <span style="margin-left:auto;font-size:13px;color:#94A3B8" id="tab3StatusText">队列空闲</span>
+            </div>
+            <div class="table-wrap" id="tab3Wrap">
+                <div class="empty-state" id="tab3Empty">
+                    <div class="icon">📥</div>
+                    <div>下载队列为空</div>
+                    <div class="hint">在模型列表中点击 ⬇下载 将模型加入队列</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="toast" id="toast"></div>
+        <div class="progress-bar">
+            <div class="fill" id="globalBar" style="width:0%"></div>
+        </div>
+
+    </div><!-- /main -->
+
+    <script>
+        const STATE = {
+            tab1: { models: [], searchTimer: null, loaded: false },
+            tab2: { models: [] },
+            currentTab: 'tab1',
+        };
+
+        function switchTab(tab, save) {
+            STATE.currentTab = tab;
+            if (save !== false) sv('activeTab', tab);
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            document.getElementById(tab + 'Btn').classList.add('active');
+            document.getElementById(tab).classList.add('active');
+            if (tab === 'tab3') refreshQueue();
+        }
+
+        // =========== Persist ===========
+        // 用后端 JSON 文件替代 localStorage（桌面版兼容）
+        const _prefsCache = {};
+        let _svTimer = {};
+        function sv(key, val) {
+            _prefsCache[key] = val;
+            clearTimeout(_svTimer[key]);
+            _svTimer[key] = setTimeout(async () => {
+                try { await fetch('/api/prefs/save', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({key, value: val}) }); } catch(e) {}
+            }, 300);
+        }
+        async function ld(key, fb) {
+            if (_prefsCache[key] !== undefined) return _prefsCache[key];
+            try { const r = await fetch('/api/prefs/get'); const d = await r.json();
+                if (d.ok) { Object.assign(_prefsCache, d.prefs); return d.prefs[key] ?? fb; }
+            } catch(e) {}
+            return fb;
+        }
+
+        // =========== TAB 1 ===========
+        function debounceFilterTab1() {
+            const q = document.getElementById('tab1Search').value.trim();
+            const showAll = document.getElementById('tab1ShowAll').checked;
+            const source = document.getElementById('tab1Source').value;
+            sv('tab1_search', q); sv('tab1_showAll', showAll); sv('tab1_source', source);
+            clearTimeout(STATE.tab1.searchTimer);
+            STATE.tab1.searchTimer = setTimeout(() => {
+                if (!q && !showAll) {
+                    STATE.tab1.models = []; STATE.tab1.loaded = false;
+                    renderTab1Empty(); document.getElementById('tab1Total').textContent = '0';
+                    setStatus('tab1', 'idle', '输入关键词或勾选"展示全部"');
+                    return;
+                }
+                loadTab1Models(q || '');
+            }, 400);
+        }
+
+        async function loadTab1Models(search) {
+            const source = document.getElementById('tab1Source').value;
+            setStatus('tab1', 'active', `搜索中: "${search}"...`);
+            try {
+                const resp = await fetch(`/api/tab1/models?search=${encodeURIComponent(search)}&source=${encodeURIComponent(source)}`);
+                const data = await resp.json();
+                if (!data.ok) { setStatus('tab1', 'err', data.error); return; }
+                STATE.tab1.models = data.models;
+                STATE.tab1.loaded = true;
+                renderTable('tab1');
+                document.getElementById('tab1Total').textContent = data.total;
+                const srcLabel = source ? ` [${source}]` : '';
+                setStatus('tab1', 'idle', `搜索 "${search}"${srcLabel} - 找到 ${data.total} 个模型`);
+            } catch (e) { setStatus('tab1', 'err', `加载失败: ${e.message}`); }
+        }
+
+        function renderTab1Empty() {
+            STATE.tab1.loaded = false;
+            document.getElementById('tab1Tbody').innerHTML =
+                `<tr><td colspan="6"><div class="empty-state"><div class="icon">🔍</div><div>输入模型名称关键词开始搜索</div><div class="hint">输入关键词或勾选"展示全部"</div></div></td></tr>`;
+        }
+
+        // =========== TAB 2 ===========
+        const TEST_URLS = [
+            'https://huggingface.co/Comfy-Org/Wan_2.1_ComfyUI_repackaged/tree/main',
+            'https://cnb.cool/ai-models/Comfy-Org/ltx-2.3/-/tree/main/split_files/loras',
+            'https://www.modelscope.cn/models/Comfy-Org/Wan_2.2_ComfyUI_Repackaged/resolve/master',
+        ].join('\n');
+
+        function copyTestData() {
+            navigator.clipboard.writeText(TEST_URLS).then(() => {
+                document.getElementById('tab2Repos').value = TEST_URLS;
+                saveTab2Repos();
+                showToast('📋 测试链接已填入');
+            }).catch(() => {
+                document.getElementById('tab2Repos').value = TEST_URLS;
+                saveTab2Repos();
+                showToast('📋 已填入（请手动复制）');
+            });
+        }
+
+        function saveTab2Repos() {
+            sv('tab2_repos', document.getElementById('tab2Repos').value);
+        }
+
+        async function searchRepos() {
+            const text = document.getElementById('tab2Repos').value.trim();
+            saveTab2Repos();
+            if (!text) { setStatus('tab2', 'err', '请输入至少一个仓库链接'); return; }
+            const repos = text.split('\n').filter(r => r.trim());
+            const btn = document.getElementById('tab2SearchBtn');
+            btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> 搜索中...';
+            setStatus('tab2', 'active', '正在搜索...');
+            try {
+                const resp = await fetch('/api/tab2/search', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ repos, force_refresh: false }) });
+                const data = await resp.json();
+                if (!data.ok) { setStatus('tab2', 'err', data.error); return; }
+                STATE.tab2.models = data.models;
+                sv('tab2_models', data.models); sv('tab2_count', data.total);
+                renderTable('tab2');
+                document.getElementById('tab2Total').textContent = data.total;
+                document.getElementById('tab2Count').textContent = data.total;
+                document.getElementById('tab2BatchFav').style.display = data.total > 0 ? '' : 'none';
+                setStatus('tab2', 'idle', `搜索完成 - ${data.total} 个模型${data.from_cache ? ' (缓存)' : ''}`);
+            } catch (e) { setStatus('tab2', 'err', `搜索失败: ${e.message}`); }
+            finally { btn.disabled = false; btn.innerHTML = '🔍 搜索'; }
+        }
+
+        // =========== Table ===========
+        function renderTable(tab) {
+            const tbody = document.getElementById(tab + 'Tbody');
+            const models = STATE[tab].models;
+            if (!models.length) {
+                const isTab1 = tab === 'tab1';
+                tbody.innerHTML = `<tr><td colspan="${isTab1 ? 6 : 5}"><div class="empty-state"><div class="icon">${isTab1 ? '🔍' : '📭'}</div><div>${isTab1 ? '输入关键词后自动搜索' : '未找到模型或尚未搜索'}</div>${isTab1 ? '<div class="hint">在上方搜索框输入模型名称关键词</div>' : ''}</div></td></tr>`;
+                return;
+            }
+            const isTab2 = tab === 'tab2';
+            tbody.innerHTML = models.map((m, i) => {
+                const rowClass = (STATE.currentTab === tab) ? '' : '';
+                return `<tr id="${tab}-row-${i}">
+            <td class="col-source"><span class="source-tag ${m.source}">${m.source}</span></td>
+            <td class="col-filename filename-cell" title="双击复制" data-fname="${h(m.filename)}" ondblclick="copyText(this.getAttribute('data-fname'))">${h(m.filename)}</td>
+            <td class="col-path" title="${h(m.path)}">${h(m.path.replace(/\/[^\/]+$/, '/'))}</td>
+            <td class="col-size"><span class="size-tag">${h(m.size)}</span></td>
+            ${!isTab2 ? `<td style="font-size:11px;color:#94A3B8;white-space:nowrap">${h(m.favorited_at || '')}</td>` : ''}
+            <td class="col-actions">
+                <button class="btn-fav btn-sm" onclick="queueAddOne('${tab}',${i})" title="加入下载队列">⬇ 下载</button>
+                <a href="${m.url}" target="_blank" class="btn-fav btn-sm" style="text-decoration:none;margin-left:4px" title="浏览器直接下载">🌐 直链下载</a>
+                ${isTab2 ? `<button class="btn-fav" id="fav-${i}" onclick="favModel(${i})" style="margin-left:4px">收藏</button>` : ''}
+                ${!isTab2 ? `<button class="btn-fav" onclick="unfavModel('${tab}',${i})" style="margin-left:4px;background:rgba(248,113,113,.1);color:#F87171;border-color:rgba(248,113,113,.15)" title="取消收藏">✕</button>` : ''}
+            </td>
+        </tr>`;
+            }).join('');
+        }
+
+        // =========== Favorite ===========
+        async function batchFavAll() {
+            const models = STATE.tab2.models;
+            if (!models.length) return;
+            if (!confirm(`确认收藏全部 ${models.length} 个模型？`)) return;
+            try {
+                const resp = await fetch('/api/favorite/batch', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ models }) });
+                const data = await resp.json();
+                if (data.ok) {
+                    showToast(`📋 收藏完成: 新增 ${data.added} 个，跳过 ${data.skipped} 个`);
+                    refreshTab1Count();
+                    // 所有按钮改为已收藏
+                    STATE.tab2.models.forEach((_, i) => {
+                        const btn = document.getElementById('fav-' + i);
+                        if (btn) { btn.classList.add('faved'); btn.textContent = '已收藏'; }
+                    });
+                } else { alert(data.error); }
+            } catch (e) { alert('批量收藏失败: ' + e.message); }
+        }
+
+        async function unfavModel(tab, idx) {
+            const m = STATE[tab].models[idx]; if (!m) return;
+            if (!confirm(`确认取消收藏: ${m.filename}？`)) return;
+            try {
+                const resp = await fetch('/api/unfavorite', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ filename: m.filename, sha256: m.sha256, url: m.url }) });
+                const data = await resp.json();
+                if (data.ok) {
+                    showToast(`已取消收藏: ${m.filename}`);
+                    refreshTab1Count();
+                    // 从当前列表移除该行
+                    STATE[tab].models.splice(idx, 1);
+                    renderTable(tab);
+                    document.getElementById('tab1Total').textContent = STATE.tab1.models.length;
+                } else { alert(data.error); }
+            } catch (e) { alert('取消失败: ' + e.message); }
+        }
+
+        async function favModel(index) {
+            const model = STATE.tab2.models[index]; if (!model) return;
+            const btn = document.getElementById('fav-' + index);
+            btn.disabled = true; btn.textContent = '收藏中...';
+            try {
+                const resp = await fetch('/api/favorite', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ model }) });
+                const data = await resp.json();
+                if (data.ok) { btn.classList.add('faved'); btn.textContent = '已收藏'; refreshTab1Count(); setStatus('tab2', 'idle', data.message); }
+                else { btn.textContent = '失败'; }
+            } catch (e) { btn.textContent = '失败'; }
+            setTimeout(() => { btn.disabled = false; }, 2000);
+        }
+
+        // =========== Queue ===========
+        let _queuePollTimer = null;
+
+        let _toastTimer = null;
+        async function copyText(text) {
+            try { await navigator.clipboard.writeText(text); } catch(e) {
+                await fetch('/api/clipboard', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({text}) });
+            }
+            showToast('已复制: ' + text.substring(0, 40));
+        }
+
+        function showToast(msg) {
+            const el = document.getElementById('toast');
+            el.textContent = msg; el.classList.add('show');
+            clearTimeout(_toastTimer);
+            _toastTimer = setTimeout(() => el.classList.remove('show'), 2200);
+        }
+
+        async function queueAddOne(tab, idx) {
+            const model = STATE[tab].models[idx]; if (!model) return;
+            try {
+                const resp = await fetch('/api/queue/add', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ models: [model] }) });
+                const data = await resp.json();
+                if (data.ok) {
+                    refreshQueue();
+                    showToast(data.message || ('📥 已加入队列: ' + model.filename));
+                } else { alert(data.error); }
+            } catch (e) { alert('加入队列失败: ' + e.message); }
+        }
+
+        async function refreshQueue() {
+            try {
+                const resp = await fetch('/api/queue/status');
+                const data = await resp.json();
+                if (!data.ok) return;
+                renderQueue(data.items);
+                document.getElementById('tab3Count').textContent = data.items.length;
+                const hasActive = data.items.some(i => i.status === 'waiting' || i.status === 'downloading');
+        document.getElementById('tab3StatusText').textContent = data.running ? '队列运行中...' : (hasActive ? '等待中' : (data.items.length ? '已完成' : '队列空闲'));
+                // Keep polling if running or has items
+                if (data.running || data.items.some(i => i.status === 'waiting' || i.status === 'downloading')) {
+                    if (!_queuePollTimer) _queuePollTimer = setInterval(refreshQueue, 1500);
+                } else {
+                    if (_queuePollTimer) { clearInterval(_queuePollTimer); _queuePollTimer = null; }
+                }
+            } catch (e) { }
+        }
+
+        function renderQueue(items) {
+            const wrap = document.getElementById('tab3Wrap');
+            if (!items.length) {
+                wrap.innerHTML = `<div class="empty-state"><div class="icon">📥</div><div>下载队列为空</div><div class="hint">在模型列表中点击 ⬇下载 将模型加入队列</div></div>`;
+                return;
+            }
+            const icon = s => s === 'downloading' ? '⬇' : s === 'done' ? '✅' : s === 'failed' ? '❌' : '⏳';
+            wrap.innerHTML = `<table><thead><tr><th style="width:44px"></th><th style="width:80px">来源</th><th style="width:400px">文件名</th><th>保存路径</th><th style="width:90px">大小</th><th style="min-width:300px">进度</th><th style="width:80px">操作</th></tr></thead><tbody>` +
+                items.map(q => {
+                    const pct = q.progress || 0;
+                    const barW = Math.max(2, pct);
+                    const phase = q.phase || q.status;
+                    const speed = q.speed ? ` ${q.speed}/s` : '';
+                    const eta = q.eta ? ` 剩余${q.eta}` : '';
+                    const stText = q.status === 'waiting' ? '等待中'
+                        : phase === 'prealloc' ? `预分配 ${pct}%`
+                            : phase === 'verifying' ? `校验中 ${pct}%`
+                                : phase === 'skipped' ? '已跳过'
+                                    : q.status === 'downloading' ? `下载中 ${pct}%${speed}${eta}`
+                                        : q.status === 'done' ? '完成'
+                                            : q.status === 'failed' ? q.error || '失败' : '';
+                    const barColor = phase === 'prealloc' ? '#f59e0b' : phase === 'verifying' ? '#a78bfa' : q.status === 'done' ? '#10B981' : q.status === 'failed' ? '#F87171' : '#3B82F6';
+                    return `<tr class="${q.status === 'downloading' ? 'row-dl' : q.status === 'done' ? 'row-ok' : q.status === 'failed' ? 'row-fail' : ''}">
+            <td style="text-align:center">${icon(q.status)}</td>
+            <td><span class="source-tag ${q.source}">${h(q.source)}</span></td>
+            <td class="filename-cell" title="${h(q.filename)}" style="max-width:400px">${h(q.filename)}</td>
+            <td class="col-path" title="点击打开文件夹" style="cursor:pointer;text-decoration:underline;color:#60A5FA" onclick="openFolder(this)" data-path="${q.path.replace(/'/g, "&#39;")}">${h(q.path.replace(/\/[^\/]+$/, '/'))}</td>
+            <td><span class="size-tag">${h(q.size)}</span></td>
+            <td style="font-size:12px;min-width:180px">
+                <div style="display:flex;align-items:center;gap:8px">
+                    <span style="white-space:nowrap;min-width:80px">${stText}</span>
+                    <div style="flex:1;height:4px;background:rgba(255,255,255,.08);border-radius:2px;overflow:hidden">
+                        <div style="height:100%;width:${barW}%;background:${barColor};border-radius:2px;transition:width .5s"></div>
+                    </div>
+                </div>
+            </td>
+            <td style="text-align:center">
+                ${q.status === 'downloading' ? `<button class="btn btn-outline btn-sm" onclick="queueCancel('${q.id}')" style="color:#F87171;border-color:rgba(248,113,113,.4)">■ 取消</button>` : ''}
+                ${q.status !== 'downloading' ? `<button class="btn btn-outline btn-sm" onclick="queueRemove('${q.id}')">✕</button>` : ''}
+            </td>
+        </tr>`;
+                }).join('') + '</tbody></table>';
+        }
+
+        async function openFolder(el) {
+            const path = el.getAttribute('data-path');
+            try {
+                await fetch('/api/open-folder', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ path }) });
+            } catch (e) { }
+        }
+
+        async function queueCancel(qid) {
+            if (!confirm('确认取消下载？')) return;
+            await fetch(`/api/queue/cancel?id=${qid}`, { method: 'POST' });
+            refreshQueue();
+        }
+
+        async function queueRemove(qid) {
+            await fetch(`/api/queue/remove?id=${qid}`, { method: 'DELETE' });
+            refreshQueue();
+        }
+
+        async function apiQueueClear() {
+            await fetch('/api/queue/clear', { method: 'DELETE' });
+            refreshQueue();
+        }
+
+        // =========== Utils ===========
+        function setStatus(tab, cls, msg) {
+            document.getElementById(tab + 'Dot').className = 'dot ' + cls;
+            document.getElementById(tab + 'StatusText').textContent = msg;
+        }
+
+        function h(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+        // =========== Init ===========
+        async function refreshTab1Count() {
+            try {
+                const resp = await fetch('/api/tab1/count');
+                const data = await resp.json();
+                if (data.ok) document.getElementById('tab1Count').textContent = data.total;
+            } catch (e) { }
+        }
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            const s1 = await ld('tab1_search', ''); const s1a = await ld('tab1_showAll', true); const s1s = await ld('tab1_source', '');
+            document.getElementById('tab1Search').value = s1;
+            document.getElementById('tab1ShowAll').checked = s1a;
+            document.getElementById('tab1Source').value = s1s;
+            if (s1a || s1) { loadTab1Models(s1); } else { renderTab1Empty(); }
+            refreshTab1Count();
+            const s2r = await ld('tab2_repos', '');
+            if (s2r) { document.getElementById('tab2Repos').value = s2r; }
+            const s2m = await ld('tab2_models', null);
+            if (s2m) { STATE.tab2.models = s2m; renderTable('tab2');
+                const c = await ld('tab2_count', 0); document.getElementById('tab2Total').textContent = c; document.getElementById('tab2Count').textContent = c;
+                document.getElementById('tab2BatchFav').style.display = c > 0 ? '' : 'none';
+                setStatus('tab2','idle',`已加载 ${c} 个模型（来自缓存）`); }
+            document.getElementById('tab2Repos')?.addEventListener('keydown', e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) searchRepos(); });
+            const at = await ld('activeTab', 'tab1');
+            if (at !== 'tab1') switchTab(at, false);
+        });
+        window.addEventListener('beforeunload', () => { if (_queuePollTimer) clearInterval(_queuePollTimer); });
+    </script>
+</body>
+
+</html>

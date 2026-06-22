@@ -1,0 +1,8 @@
+aria2c.exe
+build_env/
+build/
+dist/
+models/
+temp/
+user_prefs.json
+__pycache__/

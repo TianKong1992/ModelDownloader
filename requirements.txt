@@ -1,0 +1,4 @@
+flask>=3.0
+pywebview>=5.0
+huggingface_hub>=0.20
+requests>=2.28
