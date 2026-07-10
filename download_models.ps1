@@ -187,7 +187,7 @@ foreach ($item in $modelList) {
         "--auto-file-renaming=false",
         "--allow-overwrite=true",
         "--check-integrity=true",
-        "--file-allocation=prealloc",
+        "--file-allocation=none",
         "--summary-interval=30",
         "--console-log-level=warn",
         "--show-console-readout=true",

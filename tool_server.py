@@ -471,30 +471,84 @@ def api_queue_add():
             })
             added += 1
 
-    _ensure_queue_running()
     msg = f"已加入 {added} 个模型"
     if skipped: msg += f"，跳过 {skipped} 个重复"
     return jsonify({"ok": True, "message": msg, "queue_len": len(_queue)})
 
 
+@app.route("/api/queue/start", methods=["POST"])
+def api_queue_start():
+    """批量下载——将 waiting 模型传给 PS 一次性执行"""
+    with _queue_lock:
+        waiting = [q for q in _queue if q["status"] == "waiting"]
+        if not waiting: return jsonify({"ok": False, "error": "没有待下载的模型"}), 400
+        for q in waiting: q["status"] = "downloading"; q["progress"] = 0; q["error"] = ""
+
+    models = [q["model"] for q in waiting]
+    temp_file = TEMP_DIR / f"batch_{uuid.uuid4().hex[:8]}.json"
+    with open(temp_file, "w", encoding="utf-8") as f:
+        json.dump(models, f, indent=2, ensure_ascii=False)
+
+    ps_cmd = [
+        "powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass",
+        "-File", str(DOWNLOAD_SCRIPT), "-BaseDir", str(_USER_DIR),
+        "-ModelFile", str(temp_file),
+    ]
+    if HF_MIRROR: ps_cmd += ["-HfMirror", HF_MIRROR]
+
+    def _run():
+        try:
+            proc = subprocess.Popen(ps_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                cwd=str(_USER_DIR), creationflags=subprocess.CREATE_NO_WINDOW)
+            proc.wait()
+            ok = proc.returncode == 0
+        except Exception: ok = False
+        with _queue_lock:
+            for q in waiting: q["status"] = "done" if ok else "failed"; q["error"] = "" if ok else "下载异常"
+        if temp_file.exists():
+            try: temp_file.unlink()
+            except Exception: pass
+
+    threading.Thread(target=_run, daemon=True).start()
+    return jsonify({"ok": True, "message": f"开始下载 {len(waiting)} 个模型"})
+
+
+def _parse_size_bytes(s: str) -> int:
+    """把 '1.14GB' / '500MiB' 等转为字节数"""
+    m = re.match(r'([\d.]+)\s*(GB|GiB|MB|MiB|KB|KiB|B)?', str(s), re.I)
+    if not m: return 0
+    v, u = float(m.group(1)), (m.group(2) or 'B').upper()
+    return int(v * {'B':1,'KB':1024,'MB':1024**2,'GB':1024**3,'GIB':1024**3,'MIB':1024**2,'KIB':1024}.get(u, 1))
+
+
 @app.route("/api/queue/status")
 def api_queue_status():
-    """获取队列状态"""
+    """获取队列状态——下载中的模型通过文件大小计算进度"""
+    items = []
     with _queue_lock:
-        items = [{
-            "id": q["id"], "filename": q["model"].get("filename", ""),
-            "size": q["model"].get("size", ""), "source": q["model"].get("source", ""),
-            "path": q["model"].get("path", ""),
-            "status": q["status"], "progress": q.get("progress", 0),
-            "phase": q.get("phase", q["status"]),
-            "speed": q.get("speed", ""), "eta": q.get("eta", ""),
-            "current_file": q.get("current_file", ""),
-            "total_files": q.get("total_files", 1),
-            "error": q.get("error", ""),
-            "added_at": q.get("added_at", ""),
-            "can_cancel": q["status"] == "downloading",
-        } for q in _queue]
-    return jsonify({"ok": True, "items": items, "running": _queue_worker_running})
+        for q in _queue:
+            m = q["model"]
+            pct = 0; cur = ""
+            if q["status"] == "downloading":
+                target_bytes = _parse_size_bytes(m.get("size", ""))
+                if target_bytes > 0:
+                    fp = Path(m.get("baseDir", str(_USER_DIR))) / m.get("path", "")
+                    aria2_fp = Path(str(fp) + ".aria2")
+                    if fp.exists():
+                        actual = fp.stat().st_size
+                        if actual >= target_bytes and not aria2_fp.exists():
+                            q["status"] = "done"; pct = 100
+                        else:
+                            pct = 100 if actual >= target_bytes else int(actual / target_bytes * 100)
+                            cur = f"{actual/1024**3:.1f}GB" if actual > 1024**3 else f"{actual/1024**2:.0f}MB"
+            elif q["status"] == "done": pct = 100
+            items.append({
+                "id": q["id"], "filename": m.get("filename",""), "size": m.get("size",""),
+                "source": m.get("source",""), "path": m.get("path",""),
+                "status": q["status"], "progress": pct, "current_size": cur,
+                "error": q.get("error",""), "added_at": q.get("added_at",""),
+            })
+    return jsonify({"ok": True, "items": items})
 
 
 @app.route("/api/queue/remove", methods=["DELETE"])

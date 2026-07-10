@@ -771,8 +771,11 @@
         <!-- TAB 3: 下载队列 -->
         <div class="tab-content" id="tab3">
             <div class="toolbar">
-                <button class="btn btn-outline btn-sm" onclick="apiQueueClear()">🗑 清理已完成</button>
-                <span style="margin-left:auto;font-size:13px;color:#94A3B8" id="tab3StatusText">队列空闲</span>
+                <button class="btn btn-outline btn-sm" onclick="apiQueueClear()">🗑 清理</button>
+                <span style="margin-left:auto;display:flex;gap:10px">
+                    <button class="btn btn-outline btn-sm" onclick="refreshQueue()">🔄 刷新</button>
+                    <button class="btn btn-primary" id="batchDownloadBtn" onclick="queueStartAll()">▶ 批量下载</button>
+                </span>
             </div>
             <div class="table-wrap" id="tab3Wrap">
                 <div class="empty-state" id="tab3Empty">
@@ -991,9 +994,15 @@
         }
 
         // =========== Queue ===========
-        let _queuePollTimer = null;
-
         let _toastTimer = null;
+
+        async function queueStartAll() {
+            if (!confirm('确认开始批量下载队列中所有模型？')) return;
+            const resp = await fetch('/api/queue/start', { method:'POST' });
+            const data = await resp.json();
+            if (data.ok) { showToast(data.message); refreshQueue(); }
+            else { alert(data.error); }
+        }
         async function copyText(text) {
             try { await navigator.clipboard.writeText(text); } catch(e) {
                 await fetch('/api/clipboard', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({text}) });
@@ -1027,14 +1036,8 @@
                 if (!data.ok) return;
                 renderQueue(data.items);
                 document.getElementById('tab3Count').textContent = data.items.length;
-                const hasActive = data.items.some(i => i.status === 'waiting' || i.status === 'downloading');
-        document.getElementById('tab3StatusText').textContent = data.running ? '队列运行中...' : (hasActive ? '等待中' : (data.items.length ? '已完成' : '队列空闲'));
-                // Keep polling if running or has items
-                if (data.running || data.items.some(i => i.status === 'waiting' || i.status === 'downloading')) {
-                    if (!_queuePollTimer) _queuePollTimer = setInterval(refreshQueue, 1500);
-                } else {
-                    if (_queuePollTimer) { clearInterval(_queuePollTimer); _queuePollTimer = null; }
-                }
+                const downloading = data.items.some(i => i.status === 'downloading');
+                document.getElementById('batchDownloadBtn').disabled = downloading;
             } catch (e) { }
         }
 
@@ -1140,7 +1143,6 @@
             const at = await ld('activeTab', 'tab1');
             if (at !== 'tab1') switchTab(at, false);
         });
-        window.addEventListener('beforeunload', () => { if (_queuePollTimer) clearInterval(_queuePollTimer); });
     </script>
 </body>
 

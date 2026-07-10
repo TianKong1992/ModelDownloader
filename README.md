@@ -1,4 +1,4 @@
-# 模型下载管理工具
+# 模型下载管理工具  已废弃  新工具为https://github.com/TianKong1992/models_downloader
 
 支持 HuggingFace / CNB / ModelScope 三个平台的模型搜索、收藏与批量下载。
 
